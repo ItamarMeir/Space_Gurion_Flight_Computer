@@ -41,6 +41,12 @@ while True:
         data_string = "".join([chr(b) for b in data])
         print(data_string, end="")
 
+        # Check if a new GPS fix is available
+        if gps.has_fix:
+            # Print the latitude and longitude
+            print("Latitude: {0:.6f} degrees".format(gps.latitude))
+            print("Longitude: {0:.6f} degrees".format(gps.longitude))
+
     if time.monotonic() - timestamp > 5:
         # every 5 seconds...
         gps.send_command(b"PMTK605")  # request firmware version
