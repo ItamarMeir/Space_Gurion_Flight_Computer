@@ -1,37 +1,26 @@
+import serial
 import time
-import serial  # Import PySerial for serial communication
 
-import adafruit_gps
+# Setup the serial connection
+# The Raspberry Pi's UART0 (serial0) is typically mapped to the TX (GPIO 14) and RX (GPIO 15) pins
+serial_port = serial.Serial("/dev/serial0", baudrate=9600, timeout=1)
 
-# Create a serial connection for the GPS connection using default speed and
-# a slightly higher timeout (GPS modules typically update once a second).
-uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)  # Use PySerial for serial communication
+# Function to read one line of data from the GPS
+def read_gps_data():
+    try:
+        line = serial_port.readline().decode('ascii', errors='replace')
+        return line.strip()
+    except serial.SerialException as e:
+        print(f"Error reading from the serial port: {e}")
+        return None
 
-# Create a GPS module instance.
-gps = adafruit_gps.GPS(uart)  # Use UART/pyserial
-
-# Initialize the GPS module by changing what data it sends and at what rate.
-gps.send_command(b"PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")  # Turn on GGA and RMC info
-gps.send_command(b"PMTK220,1000")  # Set update rate to once a second
-
-# Main loop runs forever printing data as it comes in
-timestamp = time.monotonic()
-while True:
-    data = gps.read(32)  # read up to 32 bytes
-    if data is not None:
-        # convert bytearray to string
-        data_string = "".join([chr(b) for b in data])
-        print("Received:", data_string)
-
-        # Check if a new GPS fix is available
-        if gps.has_fix:
-            print("Latitude: {0:.6f} degrees".format(gps.latitude))
-            print("Longitude: {0:.6f} degrees".format(gps.longitude))
-        else:
-            print("Waiting for fix...")
-
-    if time.monotonic() - timestamp > 5:
-        # every 5 seconds...
-        print("Requesting firmware version...")
-        gps.send_command(b"PMTK605")  # request firmware version
-        timestamp = time.monotonic()
+# Main loop to read and print GPS data
+try:
+    while True:
+        data = read_gps_data()
+        if data:
+            print(data)
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("GPS reading stopped by user")
+    serial_port.close()
